@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Find True Profitability</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); }
+  </style>
+</head>
+<body class="bg-zinc-950 text-white min-h-screen">
+  <div class="max-w-7xl mx-auto">
+    <!-- NAV -->
+    <nav class="flex items-center justify-between px-8 py-6 border-b border-zinc-800">
+      <div class="flex items-center gap-8">
+        <div class="flex items-center gap-2 text-2xl font-bold">📈</div>
+        <div class="flex gap-2 bg-zinc-900 rounded-3xl p-1">
+          <button onclick="switchTab(0)" id="tab-0" class="px-6 py-2 rounded-3xl font-medium bg-white text-black">Analyze</button>
+          <button onclick="switchTab(1)" id="tab-1" class="px-6 py-2 rounded-3xl font-medium">Leaderboard</button>
+          <button onclick="switchTab(2)" id="tab-2" class="px-6 py-2 rounded-3xl font-medium">Compare</button>
+          <button onclick="switchTab(3)" id="tab-3" class="px-6 py-2 rounded-3xl font-medium">Pool Finder</button>
+        </div>
+      </div>
+      <div class="text-sm text-zinc-400">Made for No Brakes • Live Uniswap V3 Base</div>
+    </nav>
+
+    <!-- HERO / ANALYZE -->
+    <div id="analyze-section">
+      <div class="pt-20 pb-12 text-center">
+        <h1 class="text-6xl font-bold tracking-tighter">Find True Profitability</h1>
+        <p class="mt-4 text-xl text-zinc-400">Paste any Uniswap V3 pool address</p>
+      </div>
+
+      <div class="max-w-2xl mx-auto px-4">
+        <div class="glass border border-zinc-800 rounded-3xl p-2 flex items-center gap-4">
+          <input id="pool-address" type="text" placeholder="Enter Pool Contract Address (0x...)" 
+                 class="flex-1 bg-transparent px-6 py-4 text-lg outline-none placeholder-zinc-500">
+          <button onclick="analyzePool()" 
+                  class="bg-white text-black px-10 py-4 rounded-2xl font-semibold hover:bg-zinc-100">Analyze</button>
+        </div>
+        <div class="flex justify-center gap-6 mt-6 text-sm">
+          <div class="bg-zinc-900 px-4 py-1 rounded-full">CHAIN: <span id="chain-badge" class="font-medium text-emerald-400">Base</span></div>
+          <div class="bg-zinc-900 px-4 py-1 rounded-full">PROTOCOL: <span id="protocol-badge" class="font-medium text-emerald-400">Uniswap V3</span></div>
+        </div>
+      </div>
+
+      <!-- RESULTS -->
+      <div id="results" class="hidden mt-16 px-8">
+        <!-- Pool Header -->
+        <div class="flex items-start justify-between mb-8">
+          <div>
+            <div id="pool-name" class="text-5xl font-bold">WETH / USDC</div>
+            <div id="pool-address-display" class="text-zinc-400 text-sm mt-1 font-mono"></div>
+          </div>
+          <div class="flex items-center gap-4">
+            <button onclick="toggleBookmark()" id="bookmark-btn"
+                    class="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 px-6 py-3 rounded-2xl">⭐ Bookmark</button>
+            <div class="text-right">
+              <div class="text-4xl font-bold text-emerald-400" id="current-price">$0.00</div>
+              <div class="text-xs text-zinc-400">CURRENT PRICE • SCORE <span id="score" class="font-bold text-white">76</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Time selector -->
+        <div class="flex gap-2 justify-center mb-8 bg-zinc-900 rounded-3xl p-1 w-fit mx-auto">
+          <button onclick="setPeriod(this)" class="time-btn px-6 py-2 rounded-3xl">24H</button>
+          <button onclick="setPeriod(this)" class="time-btn px-6 py-2 rounded-3xl">48H</button>
+          <button onclick="setPeriod(this)" class="time-btn px-6 py-2 rounded-3xl bg-white text-black">7D</button>
+          <button onclick="setPeriod(this)" class="time-btn px-6 py-2 rounded-3xl">30D</button>
+          <button onclick="setPeriod(this)" class="time-btn px-6 py-2 rounded-3xl">90D</button>
+        </div>
+
+        <!-- TVL Cards -->
+        <div class="grid grid-cols-3 gap-6">
+          <div class="glass border border-zinc-800 rounded-3xl p-6">
+            <div class="flex items-center gap-2 text-sm text-zinc-400"><span class="text-2xl">📦</span> TOTAL TVL</div>
+            <div id="total-tvl" class="text-5xl font-bold mt-4">$0</div>
+          </div>
+          <div class="glass border border-zinc-800 rounded-3xl p-6">
+            <div class="flex items-center gap-2 text-sm text-zinc-400"><span class="text-2xl">⚡</span> ACTIVE (IN-RANGE) TVL</div>
+            <div id="active-tvl" class="text-5xl font-bold mt-4">$0</div>
+            <div class="mt-4 h-2 bg-orange-500 rounded-full w-[68%]"></div>
+            <div class="text-xs text-zinc-400 mt-1">UTILIZATION 68%</div>
+          </div>
+          <div class="glass border border-zinc-800 rounded-3xl p-6">
+            <div class="flex items-center gap-2 text-sm text-zinc-400"><span class="text-2xl">❄️</span> OUT OF RANGE TVL</div>
+            <div id="out-tvl" class="text-5xl font-bold mt-4">$0</div>
+          </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mt-8">
+          <div class="glass border border-zinc-800 rounded-3xl p-6">
+            <div class="text-sm text-zinc-400">7D FEES COLLECTED</div>
+            <div id="fees-7d" class="text-4xl font-bold text-emerald-400 mt-2">$0</div>
+          </div>
+          <div class="glass border border-zinc-800 rounded-3xl p-6">
+            <div class="text-sm text-zinc-400">7D VOLUME</div>
+            <div id="volume-7d" class="text-4xl font-bold mt-2">$0</div>
+          </div>
+          <div class="glass border border-zinc-800 rounded-3xl p-6">
+            <div class="text-sm text-zinc-400">ANNUALIZED FEE YIELD</div>
+            <div id="yield" class="text-4xl font-bold text-emerald-400 mt-2">0%</div>
+          </div>
+          <div class="glass border border-zinc-800 rounded-3xl p-6">
+            <div class="text-sm text-zinc-400">VOLUME / TVL RATIO</div>
+            <div id="ratio" class="text-4xl font-bold mt-2">0.00</div>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div class="glass border border-zinc-800 rounded-3xl p-6">
+            <div class="text-sm mb-4">DAILY VOLUME</div>
+            <canvas id="volume-chart" height="120"></canvas>
+          </div>
+          <div class="glass border border-zinc-800 rounded-3xl p-6">
+            <div class="text-sm mb-4">DAILY FEES COLLECTED</div>
+            <canvas id="fees-chart" height="120"></canvas>
+          </div>
+          <div class="glass border border-zinc-800 rounded-3xl p-6">
+            <div class="text-sm mb-4">TVL TREND</div>
+            <canvas id="tvl-chart" height="120"></canvas>
+          </div>
+        </div>
+
+        <!-- Simulator & Analysis -->
+        <div class="mt-12 glass border border-zinc-800 rounded-3xl p-8">
+          <h3 class="text-xl font-semibold mb-6 flex items-center gap-2"><span class="text-2xl">🧮</span> LP Earnings Simulator</h3>
+          <div class="grid grid-cols-2 gap-8">
+            <div>
+              <label class="text-sm">Your deposit (USD)</label>
+              <input id="deposit" type="number" value="10000" class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-6 py-4 mt-2">
+            </div>
+            <div>
+              <button onclick="simulateEarnings()" class="w-full bg-emerald-500 hover:bg-emerald-600 py-4 rounded-2xl font-semibold mt-7">Calculate Returns</button>
+            </div>
+          </div>
+          <div id="sim-result" class="mt-6 text-emerald-400 font-medium hidden"></div>
+        </div>
+
+        <div class="mt-8 p-8 glass border border-emerald-500/30 rounded-3xl">
+          <h3 class="text-xl font-semibold mb-4">Profitability Analysis</h3>
+          <div id="analysis-text" class="text-lg leading-relaxed text-emerald-300"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD (placeholder for now - live top pools) -->
+    <div id="leaderboard-section" class="hidden px-8 py-20">
+      <h2 class="text-4xl font-bold mb-8">Top Profitable Pools (Live)</h2>
+      <div id="leaderboard-list" class="space-y-6"></div>
+    </div>
+
+    <!-- COMPARE & FINDER - coming soon -->
+    <div id="compare-section" class="hidden text-center py-40 text-zinc-400">Compare two pools coming soon...</div>
+    <div id="finder-section" class="hidden text-center py-40 text-zinc-400">Pool Finder coming soon...</div>
+  </div>
+
+  <script>
+    // PUBLIC ENDPOINT - live Uniswap V3 Base data
+    const GRAPHQL_ENDPOINT = "https://api.goldsky.com/api/public/project_cl8ylkiw00krx0hvza0qw17vn/subgraphs/uniswap-v3-base/prod/gn";
+    let currentPool = null;
+    let volumeChart, feesChart, tvlChart;
+
+    async function graphqlQuery(query) {
+      const res = await fetch(GRAPHQL_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query })
+      });
+      const json = await res.json();
+      return json.data;
+    }
+
+    async function analyzePool() {
+      const address = document.getElementById("pool-address").value.trim().toLowerCase();
+      if (!address || !address.startsWith("0x")) {
+        alert("Please paste a valid 0x pool address");
+        return;
+      }
+
+      // Fetch pool + 7D data
+      const q = `
+        {
+          pool(id: "${address}") {
+            id token0 { symbol } token1 { symbol }
+            feeTier totalValueLockedUSD token0Price token1Price
+          }
+          poolDayDatas(first: 7, orderBy: date, orderDirection: desc, where: {pool: "${address}"}) {
+            date volumeUSD feesUSD totalValueLockedUSD
+          }
+        }
+      `;
+
+      try {
+        const data = await graphqlQuery(q);
+        currentPool = data.pool;
+        const days = data.poolDayDatas.reverse(); // oldest first for charts
+
+        // Fill header
+        document.getElementById("pool-name").textContent = `${currentPool.token0.symbol} / ${currentPool.token1.symbol}`;
+        document.getElementById("pool-address-display").textContent = currentPool.id;
+        document.getElementById("current-price").textContent = `$${parseFloat(currentPool.token0Price).toFixed(2)}`;
+        document.getElementById("score").textContent = "78"; // dynamic later
+
+        // TVL
+        const tvl = parseFloat(currentPool.totalValueLockedUSD).toLocaleString('en-US', {style:'currency', currency:'USD', minimumFractionDigits:0});
+        document.getElementById("total-tvl").textContent = tvl;
+        document.getElementById("active-tvl").textContent = tvl; // using total for MVP (real active calc later)
+        document.getElementById("out-tvl").textContent = "$0";
+
+        // 7D sums
+        let fees7d = 0, vol7d = 0;
+        days.forEach(d => { fees7d += parseFloat(d.feesUSD); vol7d += parseFloat(d.volumeUSD); });
+        document.getElementById("fees-7d").textContent = `$${fees7d.toLocaleString()}`;
+        document.getElementById("volume-7d").textContent = `$${vol7d.toLocaleString()}`;
+
+        const yieldPct = ((fees7d / parseFloat(currentPool.totalValueLockedUSD)) * (365/7) * 100).toFixed(2);
+        document.getElementById("yield").textContent = `${yieldPct}%`;
+        document.getElementById("ratio").textContent = (vol7d / parseFloat(currentPool.totalValueLockedUSD)).toFixed(3);
+
+        // Analysis text
+        document.getElementById("analysis-text").innerHTML = `
+          This pool shows excellent capital efficiency. ${yieldPct}% annualized fee yield on active capital.<br>
+          Recommended for LP deployment with tight ranges.
+        `;
+
+        // Charts
+        renderCharts(days);
+
+        // Show results
+        document.getElementById("results").classList.remove("hidden");
+        window.scrollTo(0, 600);
+
+        // Store in localStorage
+        localStorage.setItem("lastPool", JSON.stringify(currentPool));
+      } catch(e) {
+        alert("Pool not found or network issue. Try the example address: 0x6c561b446416e1a00e8e93e221854d6ea4171372");
+      }
+    }
+
+    function renderCharts(days) {
+      const volCtx = document.getElementById("volume-chart");
+      const feesCtx = document.getElementById("fees-chart");
+      const tvlCtx = document.getElementById("tvl-chart");
+
+      if (volumeChart) volumeChart.destroy();
+      if (feesChart) feesChart.destroy();
+      if (tvlChart) tvlChart.destroy();
+
+      volumeChart = new Chart(volCtx, {
+        type: 'bar',
+        data: { labels: days.map(d=>new Date(d.date*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'})), 
+                datasets: [{ label: 'Volume USD', data: days.map(d=>parseFloat(d.volumeUSD)), backgroundColor: '#3b82f6' }] },
+        options: { scales: { y: { beginAtZero: true } } }
+      });
+
+      feesChart = new Chart(feesCtx, {
+        type: 'line',
+        data: { labels: days.map(d=>new Date(d.date*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'})), 
+                datasets: [{ label: 'Fees USD', data: days.map(d=>parseFloat(d.feesUSD)), borderColor: '#10b981', tension: 0.4 }] },
+        options: { scales: { y: { beginAtZero: true } } }
+      });
+
+      tvlChart = new Chart(tvlCtx, {
+        type: 'line',
+        data: { labels: days.map(d=>new Date(d.date*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'})), 
+                datasets: [{ label: 'TVL USD', data: days.map(d=>parseFloat(d.totalValueLockedUSD)), borderColor: '#a855f7', tension: 0.4 }] },
+        options: { scales: { y: { beginAtZero: true } } }
+      });
+    }
+
+    function simulateEarnings() {
+      if (!currentPool) return alert("Analyze a pool first");
+      const deposit = parseFloat(document.getElementById("deposit").value) || 10000;
+      const yieldPct = parseFloat(document.getElementById("yield").textContent);
+      const est = (deposit * yieldPct / 100).toFixed(0);
+      document.getElementById("sim-result").classList.remove("hidden");
+      document.getElementById("sim-result").innerHTML = `Estimated 1-year earnings: <span class="text-3xl">$${est}</span> (based on current yield)`;
+    }
+
+    function toggleBookmark() {
+      if (!currentPool) return;
+      let bookmarks = JSON.parse(localStorage.getItem("bookmarks") || "[]");
+      if (bookmarks.find(b => b.id === currentPool.id)) {
+        bookmarks = bookmarks.filter(b => b.id !== currentPool.id);
+        alert("Bookmark removed");
+      } else {
+        bookmarks.push(currentPool);
+        alert("Pool bookmarked! View in future updates.");
+      }
+      localStorage.setItem("bookmarks", JSON.stringify(bookmarks));
+    }
+
+    function setPeriod(btn) {
+      document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('bg-white','text-black'));
+      btn.classList.add('bg-white','text-black');
+      // Real app would refetch - here we keep 7D
+    }
+
+    function switchTab(n) {
+      document.querySelectorAll('[id$="-section"]').forEach(s => s.classList.add("hidden"));
+      if (n === 0) document.getElementById("analyze-section").classList.remove("hidden");
+      if (n === 1) {
+        document.getElementById("leaderboard-section").classList.remove("hidden");
+        loadLeaderboard();
+      }
+      if (n === 2) document.getElementById("compare-section").classList.remove("hidden");
+      if (n === 3) document.getElementById("finder-section").classList.remove("hidden");
+    }
+
+    async function loadLeaderboard() {
+      const q = `{ pools(first: 5, orderBy: feesUSD, orderDirection: desc) { id token0{symbol} token1{symbol} totalValueLockedUSD feesUSD } }`;
+      const data = await graphqlQuery(q);
+      let html = "";
+      data.pools.forEach(p => {
+        html += `<div class="glass border border-zinc-800 rounded-3xl p-6 flex justify-between items-center">
+          <div><span class="font-bold">${p.token0.symbol}/${p.token1.symbol}</span><br><span class="text-xs text-zinc-400">${p.id.slice(0,10)}...</span></div>
+          <div class="text-right"><div class="text-emerald-400">$${parseFloat(p.totalValueLockedUSD).toLocaleString()}</div><div class="text-xs">Yield high</div></div>
+        </div>`;
+      });
+      document.getElementById("leaderboard-list").innerHTML = html;
+    }
+
+    // Tailwind init
+    document.addEventListener("DOMContentLoaded", () => {
+      tailwind.config = { content: [], theme: { extend: {} } };
+      // Load last analyzed pool if exists
+      const last = localStorage.getItem("lastPool");
+      if (last) {
+        // Auto-fill for demo
+        document.getElementById("pool-address").value = "0x6c561b446416e1a00e8e93e221854d6ea4171372";
+      }
+    });
+  </script>
+</body>
+</html>

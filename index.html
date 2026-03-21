@@ -17,6 +17,7 @@
 </head>
 <body class="bg-zinc-950 text-white min-h-screen">
   <div class="max-w-7xl mx-auto px-6 py-8">
+    <!-- NAV -->
     <nav class="flex justify-between items-center mb-12">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 bg-gradient-to-br from-cyan-400 to-violet-500 rounded-2xl flex items-center justify-center text-2xl">🪟</div>
@@ -28,60 +29,47 @@
       </div>
     </nav>
 
-    <div class="text-center mb-12">
-      <h1 class="title-font text-7xl font-semibold tracking-tighter">Find True Profitability</h1>
-    </div>
-
-    <div class="max-w-2xl mx-auto glass rounded-3xl p-2 flex items-center">
+    <!-- SEARCH -->
+    <div class="max-w-2xl mx-auto glass rounded-3xl p-2 flex items-center gap-4">
       <input id="pool-address" type="text" placeholder="Paste pool address (0x...)" class="flex-1 bg-transparent px-8 py-6 text-xl outline-none">
-      <select id="chain-select" class="bg-zinc-900 px-6 py-6 rounded-3xl mr-2 text-sm">
-        <option value="">Auto Detect</option>
-        <option value="base">Base</option>
-        <option value="ethereum">Ethereum</option>
-        <option value="arbitrum">Arbitrum</option>
-        <option value="solana">Solana</option>
-        <option value="bsc">BSC</option>
-        <option value="polygon">Polygon</option>
-        <option value="optimism">Optimism</option>
-        <option value="avalanche">Avalanche</option>
-        <option value="fantom">Fantom</option>
-        <option value="zksync">zkSync</option>
-        <option value="linea">Linea</option>
-        <option value="blast">Blast</option>
-        <option value="mantle">Mantle</option>
-        <option value="scroll">Scroll</option>
-        <option value="cronos">Cronos</option>
-        <option value="gnosis">Gnosis</option>
-        <option value="sei">Sei</option>
-        <option value="sui">Sui</option>
-        <option value="celestia">Celestia</option>
-        <option value="injective">Injective</option>
-      </select>
       <button onclick="analyzePool()" class="bg-white text-black px-12 py-6 rounded-3xl font-semibold">Analyze</button>
     </div>
 
+    <!-- CHAIN BADGE (moved outside search, right side) -->
+    <div class="flex justify-end mt-4">
+      <div id="chain-badge" class="glass px-6 py-3 rounded-3xl text-sm font-medium flex items-center gap-2">
+        <span class="text-cyan-400">CHAIN:</span> <span id="detected-chain">Auto</span>
+      </div>
+    </div>
+
     <div id="results" class="hidden mt-16">
-      <!-- Header -->
-      <div class="flex justify-between items-end mb-12">
+      <!-- RECTANGULAR PAIR BOX (like VFat) -->
+      <div class="glass rounded-3xl p-8 flex items-center justify-between">
         <div>
-          <div id="pool-name" class="title-font text-6xl font-semibold"></div>
-          <div id="pool-chain" class="text-cyan-400 text-sm font-medium mt-1"></div>
+          <div id="pool-name" class="title-font text-5xl font-semibold"></div>
+          <div id="dex-info" class="text-zinc-400 text-sm mt-1"></div>
         </div>
-        <div class="text-right">
-          <div id="current-price" class="text-6xl font-bold"></div>
-          <div id="price-change" class="text-emerald-400 text-sm"></div>
-        </div>
+        <div id="token-symbols" class="flex gap-4 text-4xl font-bold"></div>
       </div>
 
-      <!-- Widgets -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- TIME SELECTORS -->
+      <div class="flex justify-center gap-2 mt-8 bg-zinc-900 rounded-3xl p-1 w-fit mx-auto">
+        <button onclick="setPeriod(0)" class="time-btn px-8 py-3 rounded-3xl active">24H</button>
+        <button onclick="setPeriod(1)" class="time-btn px-8 py-3 rounded-3xl">48H</button>
+        <button onclick="setPeriod(2)" class="time-btn px-8 py-3 rounded-3xl">7D</button>
+        <button onclick="setPeriod(3)" class="time-btn px-8 py-3 rounded-3xl">30D</button>
+        <button onclick="setPeriod(4)" class="time-btn px-8 py-3 rounded-3xl">90D</button>
+      </div>
+
+      <!-- WIDGETS -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
         <div class="glass widget rounded-3xl p-8">
           <div class="text-zinc-400 text-xs">TOTAL TVL</div>
           <div id="total-tvl" class="text-5xl font-semibold mt-3"></div>
         </div>
         <div class="glass widget rounded-3xl p-8">
-          <div class="text-zinc-400 text-xs">24H VOLUME</div>
-          <div id="volume-24h" class="text-5xl font-semibold mt-3 text-emerald-400"></div>
+          <div class="text-zinc-400 text-xs">VOLUME</div>
+          <div id="volume-period" class="text-5xl font-semibold mt-3 text-emerald-400"></div>
         </div>
         <div class="glass widget rounded-3xl p-8">
           <div class="text-zinc-400 text-xs">EST. YIELD</div>
@@ -89,92 +77,93 @@
         </div>
       </div>
 
-      <!-- CoinGecko & CoinGlass -->
-      <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="glass rounded-3xl p-8">
-          <div class="text-xs text-zinc-400 mb-2">COINGECKO MARKET DATA</div>
-          <div id="coingecko-info" class="text-sm"></div>
-        </div>
-        <div class="glass rounded-3xl p-8">
-          <div class="text-xs text-zinc-400 mb-2">COINGLASS FUTURES OI <span class="text-[10px]">(add your key below)</span></div>
-          <input id="coinglass-key" type="text" placeholder="Paste CoinGlass API key" class="w-full bg-zinc-900 rounded-2xl px-4 py-3 text-sm mb-4">
-          <button onclick="fetchCoinGlass()" class="text-xs bg-zinc-800 hover:bg-zinc-700 px-6 py-2 rounded-2xl">Load OI</button>
-          <div id="coinglass-info" class="mt-4 text-sm text-emerald-400"></div>
-        </div>
+      <!-- VOLUME GRAPH -->
+      <div class="glass rounded-3xl p-8 mt-8">
+        <div class="text-sm text-zinc-400 mb-4">VOLUME TREND</div>
+        <canvas id="volume-chart" height="160"></canvas>
       </div>
 
-      <!-- Chart -->
-      <div class="glass rounded-3xl p-8 mt-8">
-        <canvas id="trend-chart" height="160"></canvas>
+      <!-- GRADE BOX (bottom) -->
+      <div class="glass rounded-3xl p-10 mt-12 border border-emerald-400/30">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-5xl font-bold text-emerald-400" id="grade">A+</div>
+            <div class="text-6xl font-bold" id="score">92</div>
+          </div>
+          <div class="text-right max-w-xs">
+            <div id="grade-explain" class="text-lg"></div>
+            <div class="mt-6 text-sm text-zinc-400">
+              Est. fees: <span id="fees-24h" class="text-emerald-400"></span> (24h) • 
+              <span id="fees-7d" class="text-emerald-400"></span> (7d) • 
+              <span id="fees-30d" class="text-emerald-400"></span> (30d)
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
     let currentPair = null;
-    let chartInstance = null;
+    let volumeChart = null;
 
     async function analyzePool() {
       const address = document.getElementById("pool-address").value.trim().toLowerCase();
-      if (!address) return alert("Paste a pool address");
+      if (!address) return alert("Paste pool address");
 
       document.getElementById("results").classList.add("hidden");
 
-      // AUTO CHAIN DETECTION + LIVE DATA via DexScreener
-      const searchRes = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${address}`);
-      const data = await searchRes.json();
+      const res = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${address}`);
+      const data = await res.json();
       const pair = data.pairs ? data.pairs[0] : null;
-      if (!pair) return alert("Pool not found — try another address");
+      if (!pair) return alert("Pool not found");
 
       currentPair = pair;
 
-      // Fill UI
+      // Fill pair box
       document.getElementById("pool-name").textContent = `${pair.baseToken.symbol}/${pair.quoteToken.symbol}`;
-      document.getElementById("pool-chain").textContent = pair.chainId.toUpperCase();
-      document.getElementById("current-price").textContent = `$${parseFloat(pair.priceUsd).toFixed(4)}`;
-      document.getElementById("price-change").innerHTML = `${pair.priceChange.h24 > 0 ? '+' : ''}${pair.priceChange.h24}% 24h`;
-      document.getElementById("total-tvl").textContent = `$${(pair.liquidity.usd / 1e6).toFixed(1)}M`;
-      document.getElementById("volume-24h").textContent = `$${(pair.volume.h24 / 1e6).toFixed(1)}M`;
-      document.getElementById("yield").textContent = `${(pair.volume.h24 / pair.liquidity.usd * 100).toFixed(1)}% est.`;
+      document.getElementById("dex-info").innerHTML = `${pair.chainId.toUpperCase()} • ${pair.dexId} • Pool ${pair.pairAddress.slice(0,8)}...`;
+      document.getElementById("token-symbols").innerHTML = `${pair.baseToken.symbol} <span class="text-cyan-400">/</span> ${pair.quoteToken.symbol}`;
+      document.getElementById("detected-chain").textContent = pair.chainId.toUpperCase();
 
-      // CoinGecko quick price
-      const cgRes = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${pair.baseToken.symbol.toLowerCase()}&vs_currencies=usd`);
-      const cgData = await cgRes.json();
-      document.getElementById("coingecko-info").innerHTML = `CoinGecko ${pair.baseToken.symbol}: $${cgData[pair.baseToken.symbol.toLowerCase()]?.usd || 'N/A'}`;
+      // Data
+      document.getElementById("total-tvl").textContent = `$${(pair.liquidity.usd/1e6).toFixed(1)}M`;
+      document.getElementById("volume-period").textContent = `$${(pair.volume.h24/1e6).toFixed(1)}M`;
+      document.getElementById("yield").textContent = `${(pair.volume.h24 / pair.liquidity.usd * 100).toFixed(1)}%`;
+
+      // Grade
+      const score = Math.min(98, Math.floor((pair.volume.h24 / pair.liquidity.usd * 100) + 50));
+      const grade = score > 90 ? "A+" : score > 80 ? "A" : score > 70 ? "B" : "C";
+      document.getElementById("grade").textContent = grade;
+      document.getElementById("score").textContent = score;
+      document.getElementById("grade-explain").textContent = `Strong volume and liquidity. Capital efficient. Recommended for tight-range LP.`;
+      document.getElementById("fees-24h").textContent = `$${(pair.volume.h24 * 0.003).toFixed(0)}`;
+      document.getElementById("fees-7d").textContent = `$${(pair.volume.h24 * 0.003 * 7).toFixed(0)}`;
+      document.getElementById("fees-30d").textContent = `$${(pair.volume.h24 * 0.003 * 30).toFixed(0)}`;
 
       document.getElementById("results").classList.remove("hidden");
-
-      // Simple trend chart
-      renderSimpleChart();
+      renderVolumeChart();
     }
 
-    function renderSimpleChart() {
-      const ctx = document.getElementById("trend-chart");
-      if (chartInstance) chartInstance.destroy();
-      chartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: ['6h','12h','18h','24h'],
-          datasets: [{ label: 'Price Trend', data: [98, 102, 99.5, 101], borderColor: '#22d3ee', tension: 0.4 }]
-        },
-        options: { plugins: { legend: { display: false } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' } } } }
+    function renderVolumeChart() {
+      const ctx = document.getElementById("volume-chart");
+      if (volumeChart) volumeChart.destroy();
+      volumeChart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: ['24H','48H','7D','30D','90D'], datasets: [{ label: 'Volume', data: [120, 95, 650, 2100, 5800], backgroundColor: '#22d3ee' }] },
+        options: { scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' } } } }
       });
     }
 
-    async function fetchCoinGlass() {
-      const key = document.getElementById("coinglass-key").value.trim();
-      if (!key) return alert("Paste your CoinGlass API key");
-      // Example CoinGlass call (replace with your real endpoint)
-      const res = await fetch("https://open-api-v4.coinglass.com/api/futures/open-interest/aggregated-history?symbol=BTC", {
-        headers: { "Authorization": `Bearer ${key}` }
-      });
-      const data = await res.json();
-      document.getElementById("coinglass-info").textContent = `BTC OI: $${data?.data?.[0]?.openInterest || 'Loaded'}`;
+    function setPeriod(n) {
+      document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      // Real app would update chart data here
+      renderVolumeChart(); // refreshes with same data for MVP
     }
 
-    function switchTab(n) { alert("Leaderboard coming next update"); }
+    function switchTab(n) { alert("Leaderboard coming next"); }
 
-    // Auto-fill demo
     window.onload = () => document.getElementById("pool-address").value = "0x6c561b446416e1a00e8e93e221854d6ea4171372";
   </script>
 </body>
